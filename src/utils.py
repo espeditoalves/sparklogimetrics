@@ -268,6 +268,7 @@ def permutation_test(
     # Defina a semente aleatória para reprodutibilidade
     np.random.seed(42)
     for _ in range(10000):
+        # Com reposição: bootstrapping
         avg1 = np.random.choice(full_array, size=len(array1), replace=True).mean()
         avg2 = np.random.choice(full_array, size=len(array2), replace=True).mean()
         # reprece = True, Assume que qualquer valor pode vir de uma das duas listas, convergÊncia para Normal.
@@ -328,10 +329,10 @@ def bootstrap_metric_spark_permutacion(
     
     rng = np.random.RandomState(42)
     rng2 = np.random.RandomState(42)
-    
+    # está gerando várias amostras bootstrap a partir de data1 e data2
     for i in range(n_bootstrap):
         print(f'Iteração {i+1}/{n_bootstrap}')
-        
+        #withReplacement=True: Indica que a amostragem é com reposição (Bootstrapping)
         sample1 = data1.sample(withReplacement=True, fraction=1.0, seed=rng.randint(1, 10000))
         sample2 = data2.sample(withReplacement=True, fraction=1.0, seed=rng2.randint(1, 10000))
         print(f'Sample1 count: {sample1.count()}')
@@ -345,13 +346,15 @@ def bootstrap_metric_spark_permutacion(
             bootstrapped_scores1[metric].append(metrics1[metric])
             bootstrapped_scores2[metric].append(metrics2[metric])
     
-    results_scores = {}
+  
     results = {}
+    results_scores_permutacion = {}
     
     for metric in ['ks', 'auc', 'auc_pr']:
         scores1 = np.array(bootstrapped_scores1[metric])
         scores2 = np.array(bootstrapped_scores2[metric])
         
+        # Verificar a contrução do intervalo de Confiança
         lower_bound1 = float(np.percentile(scores1, (1 - alpha) / 2 * 100))
         upper_bound1 = float(np.percentile(scores1, (1 + alpha) / 2 * 100))
         mean_score1 = float(np.mean(scores1))
@@ -372,20 +375,21 @@ def bootstrap_metric_spark_permutacion(
         }
         
         # Teste de permutação entre os dois conjuntos de scores
+        # Cada elemento dos scores, foi gerado por amostras com reposição (Bootstrapping )
         p_val, mean_lst, mean_diff, text_lst = permutation_test(scores1.tolist(), scores2.tolist())
         print('####'*10)
         print(metric)
         print('---'*10)
         print(text_lst)
         
-        results_scores[metric] = {
+        results_scores_permutacion[metric] = {
             'scores1': scores1.tolist(),
             'scores2': scores2.tolist(),
             'p_value': p_val,
             'mean_diff': mean_diff
         }
     
-    return results_scores, results
+    return results_scores_permutacion, results
 
 def df_scores_1_2(scores_dic: Dict[str, Dict[str, List[float]]]) -> pd.DataFrame:
     """
