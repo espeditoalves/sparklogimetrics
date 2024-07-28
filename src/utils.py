@@ -1,11 +1,33 @@
 import numpy as np
 import pandas as pd
+import scipy.stats as st
+import matplotlib.pyplot as plt
+from typing import Union
+
 from typing import Dict, List, Tuple
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 from pyspark.sql import Window
 from pyspark.ml.evaluation import BinaryClassificationEvaluator
 from pyspark.sql.functions import col
+# Definindo os parâmetros globais
+plt.rcParams.update({
+    # 'font.family': 'serif',         # Fonte geral
+    # 'font.serif': 'Times New Roman',# Estilo da fonte
+    'font.size': 12,                # Tamanho da fonte
+    'axes.labelsize': 12,           # Tamanho da fonte dos rótulos dos eixos
+    'axes.titlesize': 12,           # Tamanho da fonte dos títulos dos subplots
+    'xtick.labelsize': 10,          # Tamanho da fonte dos rótulos do eixo x
+    'ytick.labelsize': 10,          # Tamanho da fonte dos rótulos do eixo y
+    'legend.fontsize': 10,          # Tamanho da fonte da legenda
+    'figure.titlesize': 10,         # Tamanho da fonte do título da figura
+    # 'axes.spines.right': False,     # Remover a espinha do lado direito
+    # 'axes.spines.top': False        # Remover a espinha do topo
+    'savefig.dpi': 300,             # DPI para salvar a figura
+    'savefig.format': 'png',        # Formato da figura ao salvar
+    'savefig.bbox': 'tight',        # Remove espaços em branco extras
+    'savefig.pad_inches': 0.1       # Espaçamento de preenchimento em polegadas
+})
 
 def calculate_auc_roc(df: DataFrame) -> float:
     """
@@ -131,7 +153,7 @@ def calcula_mostra_matriz_confusao(df_transform_modelo: DataFrame, normalize: bo
 def bootstrap_metric_spark(
     data: DataFrame,
     n_bootstrap: int = 100,
-    alpha: float = 0.95
+    confidence_level: float = 0.95
 ) -> Dict[str, Dict[str, List[float]]]:
     """
     Calcula o intervalo de confiança e a média para várias métricas usando o método de bootstrap.
@@ -139,7 +161,7 @@ def bootstrap_metric_spark(
     Args:
     - data: DataFrame do Spark contendo os dados com as colunas 'label' e 'prediction'.
     - n_bootstrap: Número de amostras bootstrap a serem geradas (padrão é 1000).
-    - alpha: Nível de confiança para o intervalo de confiança (padrão é 0.95).
+    - confidence_level: Nível de confiança para o intervalo de confiança (padrão é 0.95).
 
     Returns:
     - Um dicionário onde as chaves são os nomes das métricas ('ks', 'auc', 'auc_pr') e os valores são dicionários contendo:
@@ -186,8 +208,8 @@ def bootstrap_metric_spark(
     # Iterar sobre cada lista e calcular os valores desejados
     for chave, scores in listas:
         sorted_scores = np.array(scores)
-        lower_bound = float(np.percentile(sorted_scores, (1 - alpha) / 2 * 100))
-        upper_bound = float(np.percentile(sorted_scores, (1 + alpha) / 2 * 100))
+        lower_bound = float(np.percentile(sorted_scores, (1 - confidence_level) / 2 * 100))
+        upper_bound = float(np.percentile(sorted_scores, (1 + confidence_level) / 2 * 100))
         mean_score = float(np.mean(sorted_scores))
         std_dev = float(np.std(sorted_scores, ddof=1))  # Usando ddof=1 para amostras
 
@@ -267,7 +289,7 @@ def permutation_test(
     mean_lst = []
     # Defina a semente aleatória para reprodutibilidade
     np.random.seed(42)
-    for _ in range(10000):
+    for i in range(10000):
         # Com reposição: bootstrapping
         avg1 = np.random.choice(full_array, size=len(array1), replace=True).mean()
         avg2 = np.random.choice(full_array, size=len(array2), replace=True).mean()
@@ -275,9 +297,9 @@ def permutation_test(
         mean_lst.append(avg1 - avg2)
     
     if mean_diff > 0:
-        p_val = np.sum(np.array(mean_lst) > mean_diff) / 1# len(mean_lst) ou 10000
+        p_val = np.sum(np.array(mean_lst) > mean_diff) / len(mean_lst) #ou 10000
     else:
-        p_val = np.sum(np.array(mean_lst) < mean_diff) / 1# len(mean_lst) ou 10000
+        p_val = np.sum(np.array(mean_lst) < mean_diff) / len(mean_lst) #ou 10000
     
     text_lst = ["\n Teste de Significancia ", 
                 "**$H_0$:** Diferença entre as médias das métricas é zero. \n",
@@ -299,7 +321,7 @@ def bootstrap_metric_spark_permutacion(
     data1: DataFrame,
     data2: DataFrame,
     n_bootstrap: int = 100,
-    alpha: float = 0.95
+    confidence_level: float = 0.95
 ) -> Tuple[Dict[str, Dict[str, List[float]]], Dict[str, Dict[str, float]]]:
     """
     Calcula o intervalo de confiança e a média para várias métricas usando o método de bootstrap e realiza um teste de permutação para comparar as métricas entre dois DataFrames.
@@ -308,7 +330,7 @@ def bootstrap_metric_spark_permutacion(
         data1 (DataFrame): Primeiro DataFrame do Spark contendo os dados com as colunas 'label' e 'prediction'.
         data2 (DataFrame): Segundo DataFrame do Spark contendo os dados com as colunas 'label' e 'prediction'.
         n_bootstrap (int): Número de amostras bootstrap a serem geradas. Default é 100.
-        alpha (float): Nível de confiança para o intervalo de confiança. Default é 0.95.
+        confidence_level (float): Nível de confiança para o intervalo de confiança. Default é 0.95.
 
     Returns:
         Tuple[Dict[str, Dict[str, List[float]]], Dict[str, Dict[str, float]]]:
@@ -353,17 +375,25 @@ def bootstrap_metric_spark_permutacion(
     for metric in ['ks', 'auc', 'auc_pr']:
         scores1 = np.array(bootstrapped_scores1[metric])
         scores2 = np.array(bootstrapped_scores2[metric])
+        #### Cálculo do intervalo de confiança
+        std_dev1 = np.std(scores1, ddof =1)
+        mean_score1 = np.mean(scores1)
+        lower_bound1, upper_bound1 = st.t.interval(
+            # alpha=alpha, # Versão antiga so scipy
+            confidence=confidence_level,
+            df=len(scores1) -1,
+            loc=mean_score1,
+            scale=st.sem(scores1))
         
-        # Verificar a contrução do intervalo de Confiança
-        lower_bound1 = float(np.percentile(scores1, (1 - alpha) / 2 * 100))
-        upper_bound1 = float(np.percentile(scores1, (1 + alpha) / 2 * 100))
-        mean_score1 = float(np.mean(scores1))
-        std_dev1 = float(np.std(scores1, ddof=1))
-        
-        lower_bound2 = float(np.percentile(scores2, (1 - alpha) / 2 * 100))
-        upper_bound2 = float(np.percentile(scores2, (1 + alpha) / 2 * 100))
-        mean_score2 = float(np.mean(scores2))
-        std_dev2 = float(np.std(scores2, ddof=1))
+        #### Cálculo do intervalo de confiança
+        std_dev2 = np.std(scores2, ddof =1)
+        mean_score2 = np.mean(scores2)
+        lower_bound2, upper_bound2 = st.t.interval(
+            # alpha=alpha, # Versão antiga so scipy
+            confidence=confidence_level,
+            df=len(scores2) -1,
+            loc=mean_score2,
+            scale=st.sem(scores2))
         
         results[metric] = {
             'confidence_interval1': [lower_bound1, upper_bound1],
@@ -379,8 +409,15 @@ def bootstrap_metric_spark_permutacion(
         p_val, mean_lst, mean_diff, text_lst = permutation_test(scores1.tolist(), scores2.tolist())
         print('####'*10)
         print(metric)
-        print('---'*10)
-        print(text_lst)
+        plot_pts(
+            data=mean_lst, 
+            p_valor=p_val, 
+            mean_diff=mean_diff,
+            metric = metric
+            )
+        plt.show()
+        for line in text_lst:
+            print(line) 
         
         results_scores_permutacion[metric] = {
             'scores1': scores1.tolist(),
@@ -423,4 +460,73 @@ def df_scores_1_2(scores_dic: Dict[str, Dict[str, List[float]]]) -> pd.DataFrame
     print(f"auc_pr p_value: {scores_dic['auc_pr']['p_value']}")
     print(f"auc_pr mean_diff: {scores_dic['auc_pr']['mean_diff']}")
     return df
+
+
+def plot_pts(
+        data: np.ndarray, 
+        p_valor: Union[float, int], 
+        mean_diff: float,
+        metric:str,
+    ) -> plt.Figure:
+    """
+    Plota um histograma para visualizar o resultado de um teste de permutação.
+
+    Args:
+        data (np.ndarray): Os dados a serem plotados, representando as diferenças de média geradas durante o teste de permutação.
+        p_valor (float): O valor p calculado do teste de permutação.
+        mean_diff (float): A diferença de médias observada entre os grupos.
+        metric (str): Nome da metrica a ser plotada.
+
+    Returns:
+        plt.Figure: Um objeto matplotlib.pyplot que contém o histograma do teste de permutação.
+    """
+    
+    # Cria o histograma com um número fixo de bins
+    # O parâmetro `bins` define o número de subdivisões do histograma
+    ni, xi = np.histogram(data, bins=17)
+
+    # Normaliza o histograma para que a soma das frequências seja 1
+    fi = ni / np.sum(ni)
+
+    # Calcula a largura do intervalo dos bins
+    delta_xi = xi[1] - xi[0]
+    xi = xi + np.abs(delta_xi) / 2.0
+    print("* Intervalo do bin: %.3f" % delta_xi)
+
+    # Plota a linha vertical indicando a diferença de médias observada
+    plt.plot(
+        [mean_diff, mean_diff], 
+        [0, np.max(ni) * 0.85], 
+        color='red', 
+        linestyle='--', 
+        label='Diff. observada'
+    )
+
+    # Define o alinhamento do texto dependendo do valor de p_valor e mean_diff
+    if p_valor <= 0.05:
+        alinhamento = 'center'
+    else:
+        if mean_diff < 0:
+            alinhamento = 'right'
+        else:
+            alinhamento = 'left'
+
+    # Adiciona texto ao plot com o valor p
+    plt.text(mean_diff, np.max(ni) * 0.9, f'p_val={np.round(p_valor, 3)}',
+             horizontalalignment=alinhamento, fontsize=12)
+
+    # Plota o histograma
+    plt.bar(xi[:-1], ni, label='Data', edgecolor='black', color=[0, 0.6, 0.3], 
+            width=np.abs(delta_xi) * 0.9, align='center')
+
+    # Configurações do plot
+    plt.title(f"Permutation Test Score - {metric}")
+    plt.xlabel("Difference of means")
+    plt.ylabel("Counts")
+    plt.legend()
+    plt.grid()
+    plt.savefig(f"work/output/figures/{metric}_permutation_test.png", dpi=300, format="png", bbox_inches="tight", pad_inches=0.1)
+
+    # Retorna o objeto plt para permitir manipulação adicional
+    return plt
 
