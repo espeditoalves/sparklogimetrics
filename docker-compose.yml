@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  pyspark-notebook:
+    image: my-image-pyspark-notebook
+    container_name: sparklogimetrics
+    ports:
+      - "8888:8888"
+    volumes:
+      - C:\\Users\\esped\\Documents\\Respositorio_git\\Repositorio_projetos\\sparklogimetrics:/home/jovyan/work
+    #environment:
+    #  - JUPYTER_TOKEN=your_token_here  # Substitua por um token se precisar de autenticação
+    # Esse token pode ser qualquer coisa, se eu não escolher, posso pegar o automatico com
+    # docker logs <nome_container>
+    command: start-notebook.sh
