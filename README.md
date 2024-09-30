@@ -1,301 +1,112 @@
-- [image\_spark\_docker\_file](#image_spark_docker_file)
-  - [Como usar Dockerfile:](#como-usar-dockerfile)
-  - [docker build](#docker-build)
-  - [Rodando o Container](#rodando-o-container)
-    - [Descrição dos Componentes](#descrição-dos-componentes)
-    - [Resumo](#resumo)
-  - [Passo a Passo para Obter o Token do Jupyter e Usar no VSCode](#passo-a-passo-para-obter-o-token-do-jupyter-e-usar-no-vscode)
-    - [1.0 Use o link e token:](#10-use-o-link-e-token)
-  - [Caso o poetry não funcione corretamente](#caso-o-poetry-não-funcione-corretamente)
-  - [Comandos uteis](#comandos-uteis)
-    - [Como acessar o shell do Container](#como-acessar-o-shell-do-container)
-    - [Como sair do shell](#como-sair-do-shell)
-    - [Como parar o Container:](#como-parar-o-container)
-    - [Como voltar a usar o Container:](#como-voltar-a-usar-o-container)
-    - [Como remover um container:](#como-remover-um-container)
-  - [O que é docker-compose.yml?](#o-que-é-docker-composeyml)
-  - [Como o docker-compose.yml se relaciona com o dockerfile?](#como-o-docker-composeyml-se-relaciona-com-o-dockerfile)
-  - [Principais Comandos do Docker Compose](#principais-comandos-do-docker-compose)
-    - [1. Iniciar serviços definidos no arquivo `docker-compose.yml`](#1-iniciar-serviços-definidos-no-arquivo-docker-composeyml)
-    - [2. Iniciar os serviços em modo "detached" (em segundo plano)](#2-iniciar-os-serviços-em-modo-detached-em-segundo-plano)
-    - [3. Parar os serviços](#3-parar-os-serviços)
-    - [4. Remover containers, redes e volumes criados pelo `up`](#4-remover-containers-redes-e-volumes-criados-pelo-up)
-    - [5. Remover containers, redes e volumes (incluindo volumes persistentes)](#5-remover-containers-redes-e-volumes-incluindo-volumes-persistentes)
-    - [6. Verificar o status dos serviços](#6-verificar-o-status-dos-serviços)
-    - [7. Executar um comando em um container rodando](#7-executar-um-comando-em-um-container-rodando)
-    - [8. Ver os logs de todos os serviços](#8-ver-os-logs-de-todos-os-serviços)
-    - [9. Ver os logs de um serviço específico](#9-ver-os-logs-de-um-serviço-específico)
-    - [10. Recriar os serviços (sem cache)](#10-recriar-os-serviços-sem-cache)
-    - [11. Escalar o número de containers de um serviço](#11-escalar-o-número-de-containers-de-um-serviço)
-    - [12. Parar e remover containers, redes e volumes temporários criados pelo `up`](#12-parar-e-remover-containers-redes-e-volumes-temporários-criados-pelo-up)
-    - [13. Ver as redes criadas pelo Docker Compose](#13-ver-as-redes-criadas-pelo-docker-compose)
-    - [14. Listar volumes gerados](#14-listar-volumes-gerados)
-    - [15. Executar um container sem precisar iniciar todos os serviços](#15-executar-um-container-sem-precisar-iniciar-todos-os-serviços)
-- [Project Structure](#project-structure)
+# Modelo com pyspark
 
-# image_spark_docker_file
+Este projeto configura um ambiente de desenvolvimento baseado em Docker que inclui **Jupyter Notebook**, **PySpark** e o **Poetry** para gerenciar dependências Python. O projeto mapeia a pasta atual para o container, permitindo o desenvolvimento direto em notebooks ou scripts Python.
 
-Com o **`dockfiler`** presente nesse repositório você poderá criar a sua imagem de ambiente pyspark notebook para os estudos de ciências de dados.
-Esse projeto cria uma nova imagem com algumas configurações pré estabelecidas como o **`poetry`** a partir de uma imagem base **`jupyter/pyspark-notebook:spark-3.3.2`**.
+## Pré-requisitos
 
-## Como usar Dockerfile:
+Antes de começar, certifique-se de ter o **Docker** e o **Docker Compose** instalados em sua máquina:
 
-1. Criar a imagem Docker:
+- [Instalar Docker](https://docs.docker.com/get-docker/)
+- [Instalar Docker Compose](https://docs.docker.com/compose/install/)
 
-Faça o clone desse repositório e use o comando:
+## Para construir o ambiente de desenvolvimento
+
+- `Dockerfile`: Define a imagem base com `jupyter/pyspark-notebook` e instala o Poetry.
+- `docker-compose.yml`: Configura o serviço para rodar o container com mapeamento de volumes e expõe a porta do Jupyter.
+
+
+## Passos para usar o ambiente
+
+### 1. Clonar o repositório (ou copiar os arquivos para uma pasta)
 
 ```bash
-docker build -t my-image-pyspark-notebook .
+git clone https://github.com/espeditoalves/sparklogimetrics.git
+cd sparklogimetrics
 ```
-Componentes do Comando
+### 2. Construir e iniciar o container
 
-1.1 **`Docker Build`**
-* O  comando **`docker buil`** é o comando básico para construir uma nova imagem Docker a partir de um **`Dockerfile`**.
-
-1.2 **`-t my-pyspark-notebook`**
-
-A opção **`-t`** (ou **`--tag`**) é usada para atribuir uma tag (ou nome) à imagem Docker que está sendo criada. Neste caso, **`my-image-pyspark-notebook`** é o nome da imagem. A tag é útil para identificar e referenciar a imagem posteriormente.
-
-1.3 **`.`**
-
-Este é o contexto de construção, que indica onde o Docker deve procurar o **`Dockerfile`** e os arquivos necessários para a construção da imagem. O **`.`** representa o diretório atual. Assim, o Docker irá procurar por um arquivo chamado **`Dockerfile`** no diretório atual e usá-lo para construir a imagem.
-
-1. Rodar o container:
-
-``` bash
-docker run -p 9090:8888 -v C:/Users/esped/Documents/Respositorio_git/Repositorio_projetos/image_spark_docker_file:/home/jovyan/work --name meu_container_pyspark  my-image-pyspark-notebook
-```
-Esse **Dockerfile** automatiza o processo de criação de um ambiente Jupyter com PySpark e Poetry, instalando o kernel e configurando o ambiente para rodar o notebook. Caso o container já exista, ele simplesmente reutiliza o kernel já configurado.
-
-## docker build
-Com o comando **`docker build`**, o Docker irá verificar se a **imagem base** (neste caso, `jupyter/pyspark-notebook:spark-3.3.2`) já está presente localmente. Se a imagem já estiver disponível no **cache local**, ela não será baixada novamente. No entanto, se a imagem não estiver localmente ou se você usar a flag **`--no-cache`**, o Docker irá baixar a imagem novamente.
-
-Aqui estão algumas opções para otimizar o processo e evitar o download desnecessário da imagem:
-
-* **`Verificar a presença da imagem`**
-O Docker primeiro verifica se a imagem está no cache local antes de tentar baixar. Portanto, se você já baixou a imagem uma vez, ela será reutilizada em builds subsequentes.
-
-* **`Uso de cache:`**
-Por padrão, o Docker usa o cache para etapas que já foram executadas antes. O docker build reutiliza camadas previamente construídas sempre que possível.
-
-* **`Evitar --no-cache:`** 
-Não utilize a opção `--no-cache` a menos que você realmente precise de uma build limpa, pois isso forçará o Docker a ignorar o cache e baixar a imagem novamente.
-
-Se quiser garantir que o build só baixe a imagem se não estiver presente, o comportamento padrão do Docker já lida bem com isso.
-
-
-## Rodando o Container
-
-Após a criação da imagem, uso o comando abaixo para criar um container:
+No diretório onde os arquivos Dockerfile e docker-compose.yml estão localizados, execute o comando:
 
 ```bash
-docker run -p <porta_host>:<porta_container> -v <diretorio_host>:<diretorio_container> --name <nome_container> <nome_imagem>
+docker-compose up --build
 ```
-Exemplo
+
+Isso irá:
+- Baixar a imagem base jupyter/pyspark-notebook.
+- Construir uma nova imagem com o Poetry instalado.
+- Abrir o Jupyter Notebook ou Jupyter Lab na porta 8888.
+
+### 3. Acessar o Jupyter Notebook
+
+Após rodar o comando acima, o Jupyter Notebook estará acessível no navegador:
+
+- Abra seu navegador e acesse: http://localhost:8888
+- A chave/token do Jupyter estará visível nos logs do terminal onde o Docker Compose está rodando. Copie e cole no navegador para acessar o ambiente.
+
+### 4. Instalar dependências Python com Poetry
+
+Uma vez dentro do container, você pode usar o Poetry para gerenciar suas dependências:
+
+- Abra um terminal no Jupyter ou conecte-se ao container usando docker exec.
 ```bash
-docker run -p 9090:8888 -v C:/Users/esped/Documents/Respositorio_git/Repositorio_projetos/image_spark_docker_file:/home/jovyan/work --name meu_container_pyspark  my-image-pyspark-notebook
+# <nome-container> está definido dentro do docker-compose
+docker exec -it <nome-container> /bin/bash
 ```
-### Descrição dos Componentes
-
-1. **`docker run:`**
-
-* Esse é o comando usado para criar e iniciar um novo container a partir de uma imagem Docker.
-
-2. **`-p 9090:8888:`**
-
-* Mapeia a porta **`8888`** do container para a porta **`9090`** no host. Isso significa que você pode acessar o Jupyter Notebook no navegador através da URL **`http://127.0.0.1:9090/lab`**.
-  
-3. **`-v /caminho/local/do/seu/projeto:/home/jovyan/work:`**
-
-Esse parâmetro monta um volume, o que significa que ele faz com que um diretório do seu sistema local (**`/caminho/local/do/seu/projeto`**) esteja disponível dentro do container em um diretório específico (**`/home/jovyan/work`**). Isso permite que você compartilhe arquivos entre o seu sistema local e o container.
-
-4. **`--name meu_container_pyspark:`**
-
-Esse parâmetro atribui um nome ao container (**`meu_container_pyspark`**). Isso facilita a referência ao container em comandos futuros, como **`docker start`**, **`docker stop`**, e **`docker rm`**.
-
-5. **`my-pyspark-notebook:`**
-
-Esse é o nome da imagem Docker que você deseja usar para criar o container. O Docker irá procurar por uma imagem com esse nome e, se não encontrar, tentará baixá-la do registro Docker (Docker Hub) se estiver disponível.
-
-### Resumo
-Você está criando um container a partir da imagem **`my-pyspark-notebook`**, mapeando a porta do container para a porta do host para acessar o Jupyter Notebook e montando um volume para compartilhar arquivos. O nome do container é definido como **`meu_container_pyspark`**, o que facilita sua gestão.
-
-Se você está acessando o Jupyter Notebook na URL **`http://127.0.0.1:9090/lab`**, isso indica que a porta do host foi corretamente mapeada para a porta do container, e tudo está funcionando conforme o esperado.
-
-## Passo a Passo para Obter o Token do Jupyter e Usar no VSCode
-
-### 1.0 Use o link e token:
-
-* Use o link com token completo fornecido pelo docker, basta copiar o link com o token (**`http://127.0.0.1:9090/lab/?token=abc123def456`**) e colar na caixa `Existent Jupyter Server`.
-* Clique em `Select Kernel` > `Select Another Kernel` > `Existent Jupyter Server`.
-
-## Caso o poetry não funcione corretamente
-Abra o shell do container e use o comando
+- Para criar um novo projeto Poetry:
 ```bash
-# Exemplo
-python -m ipykernel install --user --name=<container> --display-name "Python (nome_que_desejar)"
+poetry init
 ```
 
+- Para instalar dependências a partir de um arquivo pyproject.toml:
+```bash
+poetry install
+```
+
+- Para ativar o ambiente virtual do Poetry:
+```bash
+poetry shell
+```
+### 5. Usar o kernel do poetry
+Dentro do container do docker (shell) use o comando:
 ```bash
 # Exemplo
 python -m ipykernel install --user --name=sparklogimetrics --display-name "Python (Sparklogimetrics)"
 ```
+### 5.1 Para usar no VSCode
 
-## Comandos uteis
-
-### Como acessar o shell do Container
+* Use o link com token completo fornecido pelo docker, basta copiar o link com o token (**`http://127.0.0.1:8888/lab/?token=abc123def456`**) e colar na caixa `Existent Jupyter Server`.
+* Clique em `Select Kernel` > `Select Another Kernel` > `Existent Jupyter Server`.
 ```bash
-docker exec -it <nome-container> bash
+# Para obter o link e o token
+docker-compose logs
 ```
-### Como sair do shell
+### 5. Montagem de Volume
 
-```bash
-exit
-```
+O diretório de trabalho padrão do container é **`/home/jovyan/work`**, que está mapeado para a pasta atual em sua máquina local. Assim, todos os arquivos na pasta local estarão disponíveis dentro do container e vice-versa.
 
-### Como parar o Container:
-```bash
-docker stop <nome-container>
-```
+### 6. Parar o container
 
-### Como voltar a usar o Container:
-```bash
-docker start <nome-container>
-```
+Para parar o container, pressione CTRL + C no terminal onde o Docker Compose está rodando ou execute:
 
-### Como remover um container:
-```bash
-docker rm <nome-container>
-```
-
-## O que é docker-compose.yml?
-O arquivo **`docker-compose.yml`** é usado pelo **Docker Compose** para definir e gerenciar aplicativos que utilizam múltiplos containers de forma declarativa. Com ele, você pode descrever a infraestrutura do seu aplicativo, especificando os serviços, redes e volumes necessários para a execução do mesmo.
-
-## Como o docker-compose.yml se relaciona com o dockerfile?
-Você pode criar uma **imagem personalizada** usando um **`Dockerfile`** e, em seguida, usar o **`Docker Compose`** para orquestrar containers que utilizam essa **imagem personalizada** junto com outras imagens disponíveis na internet.
-## Principais Comandos do Docker Compose
-
-### 1. Iniciar serviços definidos no arquivo `docker-compose.yml`
-```bash
-docker-compose up
-```
-
-### 2. Iniciar os serviços em modo "detached" (em segundo plano)
-```bash
-docker-compose up -d
-```
-
-### 3. Parar os serviços
-```bash
-docker-compose stop
-```
-
-### 4. Remover containers, redes e volumes criados pelo `up`
 ```bash
 docker-compose down
 ```
-
-### 5. Remover containers, redes e volumes (incluindo volumes persistentes)
-```bash
-docker-compose down -v
-```
-
-### 6. Verificar o status dos serviços
-```bash
-docker-compose ps
-```
-
-### 7. Executar um comando em um container rodando
-```bash
-docker-compose exec <nome_servico> <comando>
-```
-
-### 8. Ver os logs de todos os serviços
-```bash
-docker-compose logs
-```
-
-### 9. Ver os logs de um serviço específico
-```bash
-docker-compose logs <nome_servico>
-```
-
-### 10. Recriar os serviços (sem cache)
-```bash
-docker-compose up --build --no-cache
-```
-
-### 11. Escalar o número de containers de um serviço
-```bash
-docker-compose up --scale <nome_servico>=<número>
-```
-
-### 12. Parar e remover containers, redes e volumes temporários criados pelo `up`
-```bash
-docker-compose down --rmi all
-```
-
-### 13. Ver as redes criadas pelo Docker Compose
-```bash
-docker network ls
-```
-
-### 14. Listar volumes gerados
-```bash
-docker volume ls
-```
-
-### 15. Executar um container sem precisar iniciar todos os serviços
-```bash
-docker-compose run <nome_servico> <comando>
-```
-
-# Project Structure
+Para iniciar o container novamente
 
 ```bash
-.
-├── config                      
-│   ├── main.yaml                   # Main configuration file
-│   ├── model                       # Configurations for training model
-│   │   ├── model1.yaml             # First variation of parameters to train model
-│   │   └── model2.yaml             # Second variation of parameters to train model
-│   └── process                     # Configurations for processing data
-│       ├── process1.yaml           # First variation of parameters to process data
-│       └── process2.yaml           # Second variation of parameters to process data
-├── data            
-│   ├── final                       # data after training the model
-│   ├── processed                   # data after processing
-│   └── raw                         # raw data
-├── docs                            # documentation for your project
-├── .gitignore                      # ignore files that cannot commit to Git
-├── Makefile                        # store useful commands to set up the environment
-├── models                          # store models
-├── notebooks                       # store notebooks
-│   ├── exploration
-│   │   └── .gitkeep
-│   ├── modeling
-│   │   └── .gitkeep
-│   ├── preprocessing
-│   │   └── .gitkeep
-│   └── reporting
-│       └── .gitkeep
-├── output                          # store outputs
-│   ├── figures
-│   │   └── .gitkeep
-│   ├── predictions
-│   │   └── .gitkeep
-│   └── reports
-│       └── .gitkeep
-├── .pre-commit-config.yaml         # configurations for pre-commit
-├── pyproject.toml                  # dependencies for poetry
-├── README.md                       # describe your project
-├── src                             # store source code
-│   ├── __init__.py                 # make src a Python module 
-│   ├── process.py                  # process data before training model
-│   ├── train_model.py              # train model
-│   └── utils.py                    # store helper functions
-└── tests                           # store tests
-    ├── __init__.py                 # make tests a Python module 
-    ├── test_process.py             # test functions for process.py
-    └── test_train_model.py         # test functions for train_model.py
+docker-compose up
 ```
+Se você quiser que os logs sejam exibidos no terminal, use apenas **`docker-compose up`**.
+
+**Execução em segundo plano:** Se você preferir que os containers sejam executados em segundo plano (modo "detach"), você pode usar:
+
+```bash
+docker-compose up -d
+```
+### Personalização
+
+Se desejar adicionar mais ferramentas ou dependências ao ambiente, você pode modificar o `Dockerfile` e incluir comandos adicionais para instalar bibliotecas ou pacotes.
+
+### Troubleshooting
+Se houver problemas com o Jupyter Notebook não iniciar, verifique os logs do Docker Compose.
+Certifique-se de que a porta 8888 não está em uso por outro serviço em sua máquina.
