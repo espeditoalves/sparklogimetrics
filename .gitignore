@@ -26,8 +26,6 @@ var/
 venv
 
 # PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
 
@@ -94,6 +92,9 @@ outputs
 
 # Data
 data/**/*.csv
+
+# Ignorar o arquivo poetry.lock
+poetry.lock
 
 # Notebooks
 # notebooks/*
