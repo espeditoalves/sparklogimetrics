@@ -91,7 +91,7 @@ target/
 outputs
 
 # Data
-data/**/*.csv
+# data/**/*.csv
 
 # Ignorar o arquivo poetry.lock
 poetry.lock
